@@ -104,28 +104,29 @@ class ChecklistEvolver:
 
         console.print(
             Panel.fit(
-                f"[bold cyan]Proposed Rule Evolution: {rule.rule_id}[/bold cyan]\n"
-                f"[bold yellow]Trigger Condition:[/bold yellow] {rule.condition}\n"
-                f"[bold red]Hard Constraint:[/bold red] {rule.hard_constraint}\n"
-                f"[bold green]Rationale:[/bold green] {rule.rationale}",
-                title="Self-Evolution Gate",
+                f"[bold]Proposed rule: {rule.rule_id}[/bold]\n"
+                f"When: {rule.condition}\n"
+                f"Rule: {rule.hard_constraint}\n"
+                f"Why: {rule.rationale}",
+                title="Update checklist?",
                 border_style="cyan",
             )
         )
 
         accepted = False
         if auto_yes:
-            console.print("[dim]Auto-accepted via --yes flag.[/dim]")
+            console.print("[dim]Accepted automatically (--yes).[/dim]")
             accepted = True
         elif auto_accept_seconds > 0:
             console.print(
-                f"[bold yellow]Accept evolved rule into live checklist? [Y/n] (Auto-accepting in {auto_accept_seconds}s for demo...)[/bold yellow]"
+                f"[bold yellow]Add this rule to your checklist? [Y/n] "
+                f"(auto-accept in {auto_accept_seconds}s)[/bold yellow]"
             )
             time.sleep(min(auto_accept_seconds, 3))
             accepted = True
-            console.print("[green][OK] Rule accepted and incorporated into trading checklist.[/green]")
+            console.print("[green][OK] Rule added.[/green]")
         else:
-            choice = input("Accept evolved rule into live checklist? [Y/n]: ").strip().lower()
+            choice = input("Add this rule to your checklist? [Y/n]: ").strip().lower()
             accepted = choice in ["y", "yes", ""]
 
         # Update logs

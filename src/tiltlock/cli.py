@@ -12,8 +12,8 @@ if sys.platform == "win32":
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 from tiltlock.demo_runner import run_demo
+from tiltlock.display import print_checklist
 from tiltlock.paper_runner import run_paper
 from tiltlock.enforcer import get_bitget_client
 from tiltlock.evolver import ChecklistEvolver
@@ -22,7 +22,7 @@ console = Console()
 
 
 def cmd_status() -> int:
-    """Displays current lock status, cooldown remaining, and active checklist."""
+    """Show cooldown lock status and the active checklist."""
     evolver = ChecklistEvolver()
     checklist = evolver.load_checklist()
     client = get_bitget_client("demo")
@@ -32,11 +32,11 @@ def cmd_status() -> int:
     if is_locked and state:
         console.print(
             Panel(
-                f"[bold red]ACCOUNT IN COOLDOWN[/bold red]\n"
-                f"[yellow]Locked At:[/yellow] {state.locked_at}\n"
-                f"[yellow]Unlocks At:[/yellow] {state.unlocks_at}\n"
-                f"[yellow]Reason:[/yellow] {state.reason}\n"
-                f"[yellow]Session Loss:[/yellow] ${state.session_cost:,.2f} USDT",
+                f"[bold red]COOLDOWN ACTIVE[/bold red]\n"
+                f"Locked at: {state.locked_at}\n"
+                f"Unlocks at: {state.unlocks_at}\n"
+                f"Reason: {state.reason}\n"
+                f"Session loss: ${state.session_cost:,.2f} USDT",
                 title="TiltLock Status",
                 border_style="red",
             )
@@ -44,95 +44,88 @@ def cmd_status() -> int:
     else:
         console.print(
             Panel(
-                "[bold green]ACCOUNT ACTIVE & UNRESTRICTED[/bold green]\n"
-                "No active cooldown lock. Execution routes open.",
+                "[bold green]No active cooldown[/bold green]\n"
+                "New orders are allowed by the local gateway.",
                 title="TiltLock Status",
                 border_style="green",
             )
         )
 
-    # Show active checklist
-    table = Table(title=f"Active Rule Checklist (v{checklist.version})", border_style="cyan")
-    table.add_column("Rule ID", style="bold cyan", width=8)
-    table.add_column("Condition", style="yellow")
-    table.add_column("Hard Constraint", style="white")
-    for r in checklist.rules:
-        table.add_row(r.rule_id, r.condition, r.hard_constraint)
-    console.print(table)
+    print_checklist(checklist, f"Active checklist (v{checklist.version})")
     console.print()
     return 0
 
 
 def cmd_unlock() -> int:
-    """Manual emergency lockfile clearer."""
+    """Clear the local cooldown lockfile."""
     client = get_bitget_client("demo")
     client.clear_lock()
-    console.print("[bold green][OK] Cooldown lock cleared. Account unlocked.[/bold green]")
+    console.print("[bold green][OK] Cooldown cleared. Trading gateway unlocked.[/bold green]")
     return 0
 
 
 def cmd_run(args) -> int:
-    """Dispatches execution based on selected mode."""
+    """Dispatch run modes."""
     if args.fixture and not args.paper:
-        console.print("[red]Error: --fixture only applies with --paper.[/red]")
+        console.print("[red]Error: --fixture only works with --paper.[/red]")
         return 1
     if args.demo:
         return run_demo(auto_yes=args.yes, aggressive=args.aggressive)
-    elif args.paper:
+    if args.paper:
         return run_paper(auto_yes=args.yes, aggressive=args.aggressive, use_fixture=args.fixture)
-    elif args.live:
-        if not args.yes:
-            confirm = input(
-                "WARNING: --live mode will enforce restrictions on your REAL sub-account. Proceed? [y/N]: "
-            )
-            if confirm.strip().lower() != "y":
-                console.print("[yellow]Aborted live mode.[/yellow]")
-                return 1
-        console.print(
-            Panel(
-                "[bold red]--live mode is intentionally gated for week-1.[/bold red]\n\n"
-                "Adapters exist ([bold]BgcCliBitgetClient[/bold]), but live enforcement is out of "
-                "the demo critical path. Use [cyan]--demo[/cyan] for judge recordings.",
-                title="TiltLock Live Mode",
-                border_style="red",
-            )
-        )
-        return 0
-    else:
-        console.print("[red]Error: Specify one of --demo, --paper, or --live.[/red]")
-        return 1
+    console.print("[red]Error: choose --demo or --paper.[/red]")
+    return 1
 
 
 def main():
     parser = argparse.ArgumentParser(
         prog="tiltlock",
-        description="Autonomous trade review, tilt diagnosis, and self-evolving checklist system.",
+        description=(
+            "TiltLock detects revenge-trading patterns, pauses the account, "
+            "and updates your personal trading rules."
+        ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    # run command
-    run_parser = subparsers.add_parser("run", help="Start TiltLock engine")
+    run_parser = subparsers.add_parser("run", help="Run TiltLock")
     run_group = run_parser.add_mutually_exclusive_group(required=True)
-    run_group.add_argument("--demo", action="store_true", help="Zero-network deterministic recording demo")
-    run_group.add_argument("--paper", action="store_true", help="Live poll fills via Bitget Agent Hub CLI ('bgc')")
-    run_group.add_argument("--live", action="store_true", help="Connect to Bitget production sub-account")
-    run_parser.add_argument("--fixture", action="store_true", help="Replay deterministic fixture through paper adapter (--paper only)")
-    run_parser.add_argument("--yes", "-y", action="store_true", help="Auto-accept all interactive prompts")
-    run_parser.add_argument("--aggressive", action="store_true", help="Aggressive flatten: close open positions upon tilt lock")
+    run_group.add_argument(
+        "--demo",
+        action="store_true",
+        help="Offline demo with a built-in tilt scenario (no Bitget account needed)",
+    )
+    run_group.add_argument(
+        "--paper",
+        action="store_true",
+        help="Use Bitget Demo Trading through the bgc CLI",
+    )
+    run_parser.add_argument(
+        "--fixture",
+        action="store_true",
+        help="With --paper: replay the demo scenario through real bgc commands",
+    )
+    run_parser.add_argument(
+        "--yes",
+        "-y",
+        action="store_true",
+        help="Auto-accept the proposed checklist rule",
+    )
+    run_parser.add_argument(
+        "--aggressive",
+        action="store_true",
+        help="Also flatten open positions when locking the account",
+    )
 
-    # status command
-    subparsers.add_parser("status", help="Show current cooldown and checklist status")
-
-    # unlock command
-    subparsers.add_parser("unlock", help="Emergency reset of local cooldown lock")
+    subparsers.add_parser("status", help="Show cooldown and checklist")
+    subparsers.add_parser("unlock", help="Clear the local cooldown lock")
 
     args = parser.parse_args()
 
     if args.command == "run":
         sys.exit(cmd_run(args))
-    elif args.command == "status":
+    if args.command == "status":
         sys.exit(cmd_status())
-    elif args.command == "unlock":
+    if args.command == "unlock":
         sys.exit(cmd_unlock())
 
 

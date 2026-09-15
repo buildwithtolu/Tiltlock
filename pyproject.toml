@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "tiltlock"
 version = "0.1.0"
 description = "Autonomous trade review, tilt diagnosis, and self-evolving checklist system with live Bitget Agent Hub enforcement."
-authors = [{ name = "Bitget AI Hackathon Team" }]
+authors = [{ name = "buildwithtolu" }]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

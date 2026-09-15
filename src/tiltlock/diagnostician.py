@@ -16,20 +16,18 @@ CANNED_DEMO_DIAGNOSIS = TiltDiagnosis(
     confidence=0.94,
     violated_checklist_rules=["R02"],
     sequence_audit=(
-        "Trader took a legitimate -$150 stop on NVDA, then within 38 seconds impulsively entered "
-        "TSLA at 25 contracts—violating Rule R02's 15-contract ceiling (2.5x size escalation). "
-        "As the market moved against the oversized position, the trader manually canceled the resting "
-        "stop-loss at $239.50, turning a disciplined risk-managed trade into an undisciplined "
-        "-$400 panic liquidation."
+        "A clean -$150 NVDA stop was followed 38 seconds later by a TSLA entry at 25 contracts, "
+        "breaking Rule R02's 15-contract cap (2.5x size). While the trade was already losing, the "
+        "resting stop at $239.50 was canceled. The position was later panic-closed at -$400."
     ),
-    cognitive_distortion="Loss Aversion & Sunk Cost Fallacy (refusal to accept initial red trade)",
+    cognitive_distortion="Loss aversion and sunk-cost thinking after the first red trade",
     session_cost=550.00,
     prescribed_cooldown_minutes=45,
     evolved_rule=EvolvedRule(
         rule_id="R03",
-        condition="Following any realized stop-loss exit on tech/US stock rTokens",
-        hard_constraint="Mandatory 30-minute re-entry lockout on all correlated tech equity contracts",
-        rationale="Prevents immediate impulsive size-escalation and revenge trading post stop-out",
+        condition="After any stop-loss exit on tech or US stock rTokens",
+        hard_constraint="No re-entry on correlated tech contracts for 30 minutes",
+        rationale="Stops immediate size-up and revenge trades right after a stop-out",
         created_at=None,
     ),
 )
@@ -142,18 +140,18 @@ class TiltDiagnostician:
             confidence=0.0,
             violated_checklist_rules=violated or ["R02"],
             sequence_audit=(
-                f"Automated fallback diagnosis: Triggered on {trigger.summary}. "
-                f"Trader incurred ${trigger.session_loss:.2f} in session losses with a {trigger.size_ratio:.1f}x "
-                f"position size escalation on {trigger.symbol}. Stop discipline violated."
+                f"Model review unavailable, so a local review was used. "
+                f"Signals: {trigger.summary}. Session loss ${trigger.session_loss:.2f} on "
+                f"{trigger.symbol} with {trigger.size_ratio:.1f}x size vs baseline."
             ),
-            cognitive_distortion="Loss Aversion & Tilting Escalation",
+            cognitive_distortion="Loss aversion with escalating risk after losses",
             session_cost=trigger.session_loss,
             prescribed_cooldown_minutes=self.config.cooldown.default_minutes,
             evolved_rule=EvolvedRule(
                 rule_id=rule_id,
-                condition=f"After any realized loss on {trigger.symbol}",
-                hard_constraint="Mandatory 30-minute cooling period before re-entry",
-                rationale="Automated containment rule generated from tilt event",
+                condition=f"After a realized loss on {trigger.symbol}",
+                hard_constraint="Wait 30 minutes before opening a new position",
+                rationale="Gives time to reset after a tilt sequence",
             ),
         )
 

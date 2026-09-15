@@ -197,12 +197,13 @@ class MockBitgetClient(BitgetClient):
         return [target]
 
     def cancel_strategy_orders(self, symbol: Optional[str] = None) -> List[str]:
-        open_mock_strategy_orders = [
-            f"STRAT-SL-{symbol or 'TSLAUSDT_rToken'}-001",
-            f"STRAT-TP-{symbol or 'TSLAUSDT_rToken'}-002",
+        # Demo-only stand-ins for resting stop/trigger orders.
+        demo_strategy_orders = [
+            f"DEMO-SL-{symbol or 'TSLAUSDT'}",
+            f"DEMO-TP-{symbol or 'TSLAUSDT'}",
         ]
         canceled = []
-        for strat_id in open_mock_strategy_orders:
+        for strat_id in demo_strategy_orders:
             self.canceled_strategy_orders.append(strat_id)
             canceled.append(strat_id)
         return canceled

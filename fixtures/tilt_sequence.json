@@ -1,7 +1,7 @@
 {
   "scenario_name": "Revenge Escalation & Stop-Loss Tamper on Tech rTokens",
   "trader_account": {
-    "account_id": "bitget_sub_agentic_091",
+    "account_id": "demo-agentic-subaccount",
     "account_type": "Bitget Agentic Sub-Account",
     "starting_balance_usdt": 10000.00
   },
