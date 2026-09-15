@@ -33,71 +33,98 @@ TiltLock interacts with Bitget accounts through authentic Agent Hub intent verbs
 
 ---
 
-## Quickstart
+## Try It Yourself
 
-### 1. Repository Setup
-```powershell
-# Navigate to repository root
-cd C:\Projects\Tiltlock
+### Prerequisites
+- Python 3.10+
+- (Optional, paper mode only) Node.js 20+, Bitget Demo API key, and `bgc`
 
-# Set PYTHONPATH
-$env:PYTHONPATH="src"
+### Fast path: offline demo (no Bitget account needed)
+```bash
+git clone https://github.com/buildwithtolu/Tiltlock.git
+cd Tiltlock
+python -m pip install pydantic pyyaml rich requests
 ```
 
-### 2. Run the Deterministic Demo (Zero-Network)
+**Windows PowerShell**
 ```powershell
-# 90-second deterministic demo running in ~2s with exit code 0
+$env:PYTHONPATH="src"
 python -m tiltlock.cli run --demo --yes
+python -m tiltlock.cli status
+python -m tiltlock.cli unlock
+python -m unittest discover tests
+```
 
-# With aggressive flatten enabled
+**macOS / Linux**
+```bash
+export PYTHONPATH=src
+python -m tiltlock.cli run --demo --yes
+python -m tiltlock.cli status
+python -m tiltlock.cli unlock
+python -m unittest discover tests
+```
+
+This is the judge recording path: zero network, deterministic Detect → Diagnose → Enforce → Evolve.
+
+Optional:
+```bash
 python -m tiltlock.cli run --demo --yes --aggressive
 ```
 
-### 3. Bitget Agent Hub CLI (`bgc`) Setup & Paper Mode
+### Paper mode (optional, needs Bitget + `bgc`)
+1. Install the Bitget Agent Hub CLI:
+   ```bash
+   npm install -g @bitget-ai/bitget-agent-cli
+   bgc --version
+   ```
+2. Create a **Demo** API key on Bitget with:
+   - Spot trading
+   - Futures order
+   - Futures holdings
+   - Leave IP bind blank
+   - No withdraw permission
+3. Set credentials in your shell (do not commit these):
 
-#### How to install & authenticate `bgc`:
-1. Clone the Bitget Agent Hub repository:
-   ```bash
-   git clone https://github.com/BitgetLimited/agent_hub
-   ```
-2. Follow the setup guide:
-   [https://www.bitget.careers/support/articles/12560603894122](https://www.bitget.careers/support/articles/12560603894122)
-3. Authorize your paper trading session:
-   ```bash
-   bgc --paper-trading
-   ```
-4. Verify readiness probe:
+**Windows PowerShell**
+```powershell
+$env:BITGET_API_KEY="your_demo_api_key"
+$env:BITGET_SECRET_KEY="your_demo_secret"
+$env:BITGET_PASSPHRASE="your_passphrase"
+$env:PYTHONPATH="src"
+```
+
+**macOS / Linux**
+```bash
+export BITGET_API_KEY="your_demo_api_key"
+export BITGET_SECRET_KEY="your_demo_secret"
+export BITGET_PASSPHRASE="your_passphrase"
+export PYTHONPATH=src
+```
+
+4. Verify Bitget paper access:
    ```bash
    bgc discover --paper-trading
    ```
+5. Run TiltLock paper paths:
+   ```bash
+   # Fixture replay through real bgc adapter
+   python -m tiltlock.cli run --paper --fixture --yes
 
-#### Mode differences:
-- `python -m tiltlock.cli run --demo`: Zero-network recording demo using `MockBitgetClient`. Guaranteed deterministic, <60s, exit code 0.
-- `python -m tiltlock.cli run --paper`: Live fill and order polling loop via `bgc` CLI on intervals configured in `config.yaml`. Requires authenticated `bgc` binary on PATH.
-- `python -m tiltlock.cli run --paper --fixture`: Deterministic paper adapter test that replays telemetry sequences through `BgcCliBitgetClient` to verify live command construction without requiring an active market session.
+   # Live polling loop
+   python -m tiltlock.cli run --paper --yes
+   ```
 
-> **Honest Dependency Notice:** If `bgc` is not installed on PATH or the paper session is unauthenticated, TiltLock fails probe immediately with exit code 1 and prints exact setup instructions. It never fakes successful live polling.
+#### Mode differences
+- `--demo`: Zero-network recording demo using `MockBitgetClient`. Deterministic, <60s, exit 0.
+- `--paper --fixture`: Replays fixtures through real `BgcCliBitgetClient` / `bgc --paper-trading`.
+- `--paper`: Live fill/order polling via `bgc` using intervals in `config.yaml`.
 
-```powershell
-# Run paper mode (fails honestly with exit 1 if bgc is missing)
-python -m tiltlock.cli run --paper --yes
+If `bgc` is missing or unauthenticated, paper mode exits `1` with setup instructions. It never fakes success.
 
-# Run paper mode fixture replay (useful for testing paper adapter)
-python -m tiltlock.cli run --paper --fixture --yes
-```
-
-### 4. Check Account & Lock Status
-```powershell
+### Useful commands
+```bash
 python -m tiltlock.cli status
-```
-
-### 5. Emergency Lock Reset
-```powershell
 python -m tiltlock.cli unlock
-```
-
-### 6. Run Full Unit Test Suite
-```powershell
 python -m unittest discover tests
 ```
 
