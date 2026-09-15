@@ -16,7 +16,7 @@ CANNED_DEMO_DIAGNOSIS = TiltDiagnosis(
     confidence=0.94,
     violated_checklist_rules=["R02"],
     sequence_audit=(
-        "A clean -$150 NVDA stop was followed 38 seconds later by a TSLA entry at 25 contracts, "
+        "A clean -$150 rNVDA stop was followed 38 seconds later by an rTSLA entry at 25 contracts, "
         "breaking Rule R02's 15-contract cap (2.5x size). While the trade was already losing, the "
         "resting stop at $239.50 was canceled. The position was later panic-closed at -$400."
     ),
@@ -51,11 +51,11 @@ class TiltDiagnostician:
         if self.mode == "demo":
             return CANNED_DEMO_DIAGNOSIS
 
-        # Live / Paper path with Qwen call and fail-safe fallback
+        # Paper path: call Qwen only when a key is present; otherwise local fallback.
         try:
             return self._call_qwen_with_retry(trigger, checklist, market_context)
         except Exception as e:
-            logger.warning(f"Qwen diagnostics failed ({e}). Using deterministic fallback.")
+            logger.warning("Qwen diagnostics unavailable (%s). Using local fallback.", e)
             return self._create_fallback_diagnosis(trigger, checklist)
 
     def _call_qwen_with_retry(
@@ -65,12 +65,19 @@ class TiltDiagnostician:
         market_context: Optional[Dict[str, Any]],
     ) -> TiltDiagnosis:
         """Calls Qwen API with a single retry and Pydantic validation."""
+        api_key = os.getenv("BITGET_QWEN_API_KEY") or os.getenv("QWEN_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "No Qwen API key set (BITGET_QWEN_API_KEY / QWEN_API_KEY). "
+                "Skipping remote review."
+            )
+
         payload = self._build_prompt_payload(trigger, checklist, market_context)
         url = self.config.policy.qwen_api_url.rstrip("/") + "/chat/completions"
-        headers = {"Content-Type": "application/json"}
-        api_key = os.getenv("BITGET_QWEN_API_KEY") or os.getenv("QWEN_API_KEY")
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        }
 
         for attempt in range(2):
             try:

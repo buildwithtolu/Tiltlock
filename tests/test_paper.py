@@ -119,9 +119,9 @@ class TestPaperMode(unittest.TestCase):
         mock_res = MagicMock()
         mock_res.returncode = 0
         mock_res.stdout = json.dumps([
-            {"orderId": "ORD-1", "symbol": "TSLAUSDT_rToken", "side": "BUY", "size": 10, "pnl": -100.0, "exitReason": "STOP_LOSS"},
-            {"orderId": "ORD-2", "symbol": "TSLAUSDT_rToken", "side": "BUY", "size": 10, "pnl": -100.0},
-            {"orderId": "ORD-3", "symbol": "TSLAUSDT_rToken", "side": "BUY", "size": 10, "pnl": -100.0},
+            {"orderId": "ORD-1", "symbol": "rTSLAUSDT", "side": "BUY", "size": 10, "pnl": -100.0, "exitReason": "STOP_LOSS"},
+            {"orderId": "ORD-2", "symbol": "rTSLAUSDT", "side": "BUY", "size": 10, "pnl": -100.0},
+            {"orderId": "ORD-3", "symbol": "rTSLAUSDT", "side": "BUY", "size": 10, "pnl": -100.0},
         ])
         mock_res.stderr = ""
         mock_subproc.return_value = mock_res
@@ -142,20 +142,20 @@ class TestPaperMode(unittest.TestCase):
         client.set_cooldown(minutes=30, reason="TILT_DETECTED", session_cost=300.0)
 
         with self.assertRaises(PermissionError) as ctx:
-            client.place_order("TSLAUSDT_rToken", "BUY", 10.0, 240.0)
+            client.place_order("rTSLAUSDT", "BUY", 10.0, 240.0)
         self.assertIn("PERMISSION_DENIED_COOLDOWN_ACTIVE", str(ctx.exception))
 
         # Clear lock allows order to proceed to bgc invocation
         client.clear_lock()
         with patch.object(client, "_do_place_order", return_value={"status": "SUBMITTED"}) as mock_do:
-            res = client.place_order("TSLAUSDT_rToken", "BUY", 10.0, 240.0)
+            res = client.place_order("rTSLAUSDT", "BUY", 10.0, 240.0)
             mock_do.assert_called_once()
             self.assertEqual(res["status"], "SUBMITTED")
 
     def test_normalize_bgc_fill_and_cancel(self):
         raw_fill = {
             "orderId": "FILL-1234",
-            "symbol": "NVDAUSDT_rToken",
+            "symbol": "rNVDAUSDT",
             "side": "buy",
             "size": "15",
             "price": "125.5",
@@ -164,7 +164,7 @@ class TestPaperMode(unittest.TestCase):
         }
         fill = normalize_bgc_fill(raw_fill, timestamp_offset_sec=10)
         self.assertEqual(fill.order_id, "FILL-1234")
-        self.assertEqual(fill.symbol, "NVDAUSDT_rToken")
+        self.assertEqual(fill.symbol, "rNVDAUSDT")
         self.assertEqual(fill.side, "BUY")
         self.assertEqual(fill.size, 15.0)
         self.assertEqual(fill.pnl, -50.0)
@@ -172,14 +172,14 @@ class TestPaperMode(unittest.TestCase):
 
         raw_cancel = {
             "orderId": "CANCEL-5678",
-            "symbol": "TSLAUSDT_rToken",
+            "symbol": "rTSLAUSDT",
             "side": "sell",
             "price": "239.50",
             "unrealizedPnl": "-120.0",
         }
         cancel = normalize_bgc_cancel(raw_cancel, timestamp_offset_sec=15)
         self.assertEqual(cancel.order_id, "CANCEL-5678")
-        self.assertEqual(cancel.symbol, "TSLAUSDT_rToken")
+        self.assertEqual(cancel.symbol, "rTSLAUSDT")
         self.assertEqual(cancel.side, "SELL")
         self.assertEqual(cancel.price, 239.50)
         self.assertEqual(cancel.unrealized_pnl, -120.0)

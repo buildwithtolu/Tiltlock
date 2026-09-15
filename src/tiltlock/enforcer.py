@@ -240,11 +240,21 @@ class MockBitgetClient(BitgetClient):
 
 
 class BgcCliBitgetClient(BitgetClient):
-    """Executes real Bitget Agent Hub CLI commands for --paper and --live."""
+    """Executes Bitget Agent Hub CLI commands for Demo Trading (--paper).
 
-    def __init__(self, paper_mode: bool = True):
-        self.paper_mode = paper_mode
-        self.base_flags = ["--paper-trading"] if paper_mode else []
+    Destructive writes require allow_writes=True. Production/live mode is not
+    exposed through the public CLI factory.
+    """
+
+    def __init__(self, paper_mode: bool = True, allow_writes: bool = False):
+        if not paper_mode:
+            raise RuntimeError(
+                "Live/production Bitget mode is disabled in TiltLock. "
+                "Use paper_mode=True with Demo API keys, or run --demo."
+            )
+        self.paper_mode = True
+        self.allow_writes = allow_writes
+        self.base_flags = ["--paper-trading"]
 
     @staticmethod
     def is_bgc_installed() -> bool:
@@ -282,6 +292,13 @@ class BgcCliBitgetClient(BitgetClient):
         except Exception as e:
             return False, "AUTH_FAILED", f"bgc execution error: {str(e)}"
 
+    def _require_writes(self, action: str) -> None:
+        if not self.allow_writes:
+            raise PermissionError(
+                f"WRITE_BLOCKED: '{action}' needs explicit consent. "
+                "Re-run with --yes or --i-understand (Demo Trading only)."
+            )
+
     def _run_bgc(self, args: List[str]) -> Tuple[int, str]:
         prefix = resolve_bgc_prefix()
         if not prefix:
@@ -291,6 +308,7 @@ class BgcCliBitgetClient(BitgetClient):
         return res.returncode, res.stdout + res.stderr
 
     def cancel_all_orders(self, symbol: Optional[str] = None) -> List[str]:
+        self._require_writes("order cancelAll")
         args = ["order", "--action", "cancelAll", "--confirm"]
         if symbol:
             args.extend(["--symbol", symbol])
@@ -298,6 +316,7 @@ class BgcCliBitgetClient(BitgetClient):
         return [f"order cancelAll: {out.strip()}"]
 
     def cancel_strategy_orders(self, symbol: Optional[str] = None) -> List[str]:
+        self._require_writes("strategy_order cancel")
         list_args = ["strategy_order", "--action", "open"]
         if symbol:
             list_args.extend(["--symbol", symbol])
@@ -329,11 +348,21 @@ class BgcCliBitgetClient(BitgetClient):
         return canceled
 
     def set_leverage(self, symbol: str, leverage: int = 1) -> bool:
-        args = ["position", "--action", "setLeverage", "--symbol", symbol, "--leverage", str(leverage)]
+        self._require_writes("position setLeverage")
+        args = [
+            "position",
+            "--action",
+            "setLeverage",
+            "--symbol",
+            symbol,
+            "--leverage",
+            str(leverage),
+        ]
         code, _ = self._run_bgc(args)
         return code == 0
 
     def close_position(self, symbol: Optional[str] = None) -> bool:
+        self._require_writes("position close")
         if symbol:
             args = ["position", "--action", "close", "--symbol", symbol, "--confirm"]
         else:
@@ -349,6 +378,7 @@ class BgcCliBitgetClient(BitgetClient):
         price: Optional[float] = None,
         order_type: str = "LIMIT",
     ) -> Dict[str, Any]:
+        self._require_writes("order place")
         args = [
             "order",
             "--action",
@@ -405,13 +435,14 @@ class BgcCliBitgetClient(BitgetClient):
         return []
 
 
-def get_bitget_client(mode: str = "demo") -> BitgetClient:
-    """Factory returning the appropriate BitgetClient for the specified mode."""
+def get_bitget_client(mode: str = "demo", allow_writes: bool = False) -> BitgetClient:
+    """Factory for supported clients. Live/production mode is intentionally unavailable."""
     if mode == "demo":
         return MockBitgetClient()
-    elif mode == "paper":
-        return BgcCliBitgetClient(paper_mode=True)
-    elif mode == "live":
-        return BgcCliBitgetClient(paper_mode=False)
-    else:
-        return MockBitgetClient()
+    if mode == "paper":
+        return BgcCliBitgetClient(paper_mode=True, allow_writes=allow_writes)
+    if mode == "live":
+        raise RuntimeError(
+            "Live/production mode is disabled. Use --demo or --paper with Demo API keys."
+        )
+    return MockBitgetClient()

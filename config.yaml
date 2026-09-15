@@ -15,6 +15,8 @@ cooldown:
 policy:
   flatten_on_lock: false                # Cancel orders + cooldown always; flatten only if aggressive
   demo_auto_accept_seconds: 3           # Countdown before auto-accepting evolved rule in --demo
+  # Optional. Used only when BITGET_QWEN_API_KEY / QWEN_API_KEY is set.
+  # If missing/expired, paper mode falls back to a local review. --demo never calls it.
   qwen_api_url: "https://hackathon.bitgetops.com/v1"
   qwen_model: "qwen3.8-max"
 

@@ -6,13 +6,14 @@
     "starting_balance_usdt": 10000.00
   },
   "market_regime": {
-    "symbol": "TSLAUSDT_rToken",
+    "symbol": "rTSLAUSDT",
     "condition": "Severe Intraday Trend Reversal",
     "indicators": {
       "atr_15m": 4.25,
       "funding_rate": 0.0002,
       "sentiment": "Bearish Extreme"
-    }
+    },
+    "note": "Demo scenario uses Bitget-style rToken pair symbols (rTSLAUSDT / rNVDAUSDT)."
   },
   "timeline": [
     {
@@ -20,45 +21,45 @@
       "timestamp_offset_sec": 0,
       "event_type": "TRADE_FILL",
       "order_id": "ORD-NVDA-101",
-      "symbol": "NVDAUSDT_rToken",
+      "symbol": "rNVDAUSDT",
       "side": "BUY",
       "size": 10,
       "entry_price": 128.50,
       "exit_price": 127.00,
       "pnl": -150.00,
       "exit_reason": "STOP_LOSS",
-      "narrative": "Standard setup on NVDA stopped out cleanly for -$150."
+      "narrative": "Standard setup on rNVDA stopped out cleanly for -$150."
     },
     {
       "step": 2,
       "timestamp_offset_sec": 38,
       "event_type": "TRADE_FILL",
       "order_id": "ORD-TSLA-201",
-      "symbol": "TSLAUSDT_rToken",
+      "symbol": "rTSLAUSDT",
       "side": "BUY",
       "size": 25,
       "entry_price": 242.00,
       "pnl": 0.00,
       "exit_reason": null,
-      "narrative": "Re-entered 38s later on TSLA at 2.5x standard size (25 contracts vs 10 baseline)."
+      "narrative": "Re-entered 38s later on rTSLA at 2.5x standard size (25 contracts vs 10 baseline)."
     },
     {
       "step": 3,
       "timestamp_offset_sec": 140,
       "event_type": "ORDER_CANCEL",
       "order_id": "SL-TSLA-201-STOP",
-      "symbol": "TSLAUSDT_rToken",
+      "symbol": "rTSLAUSDT",
       "side": "SELL",
       "price": 239.50,
       "unrealized_pnl": -62.50,
-      "narrative": "Manually canceled resting stop loss order as TSLA dipped to 239.80 in floating loss."
+      "narrative": "Manually canceled resting stop loss as rTSLA dipped to 239.80 in floating loss."
     },
     {
       "step": 4,
       "timestamp_offset_sec": 260,
       "event_type": "TRADE_FILL",
       "order_id": "ORD-TSLA-202-PANIC",
-      "symbol": "TSLAUSDT_rToken",
+      "symbol": "rTSLAUSDT",
       "side": "SELL",
       "size": 25,
       "exit_price": 236.00,

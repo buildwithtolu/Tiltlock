@@ -45,7 +45,8 @@ def cmd_status() -> int:
         console.print(
             Panel(
                 "[bold green]No active cooldown[/bold green]\n"
-                "New orders are allowed by the local gateway.",
+                "New orders are allowed by this local TiltLock gateway.\n"
+                "[dim]Note: cooldown is local to this tool, not an exchange-wide freeze.[/dim]",
                 title="TiltLock Status",
                 border_style="green",
             )
@@ -72,7 +73,12 @@ def cmd_run(args) -> int:
     if args.demo:
         return run_demo(auto_yes=args.yes, aggressive=args.aggressive)
     if args.paper:
-        return run_paper(auto_yes=args.yes, aggressive=args.aggressive, use_fixture=args.fixture)
+        return run_paper(
+            auto_yes=args.yes,
+            aggressive=args.aggressive,
+            use_fixture=args.fixture,
+            allow_writes=bool(args.yes or args.i_understand),
+        )
     console.print("[red]Error: choose --demo or --paper.[/red]")
     return 1
 
@@ -108,7 +114,13 @@ def main():
         "--yes",
         "-y",
         action="store_true",
-        help="Auto-accept the proposed checklist rule",
+        help="Auto-accept checklist updates; for --paper also consents to Demo Trading write actions",
+    )
+    run_parser.add_argument(
+        "--i-understand",
+        dest="i_understand",
+        action="store_true",
+        help="Consent to Bitget Demo Trading write actions (cancel/leverage/close) without auto-accepting rules",
     )
     run_parser.add_argument(
         "--aggressive",

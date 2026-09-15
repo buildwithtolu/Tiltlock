@@ -118,6 +118,7 @@ def run_paper(
     aggressive: bool = False,
     use_fixture: bool = False,
     poll_override: Optional[int] = None,
+    allow_writes: bool = False,
 ) -> int:
     """Run paper mode through real bgc Demo Trading commands."""
     ok, code, msg = BgcCliBitgetClient.probe(paper_mode=True)
@@ -155,7 +156,22 @@ def run_paper(
     cfg = get_config()
     evolver = ChecklistEvolver()
     checklist = evolver.load_checklist()
-    client = BgcCliBitgetClient(paper_mode=True)
+    # --yes already means non-interactive consent for Demo Trading writes.
+    allow_writes = allow_writes or auto_yes
+
+    if not allow_writes:
+        console.print(
+            Panel.fit(
+                "[bold yellow]Paper mode can cancel orders and change leverage on your Demo account.[/bold yellow]\n\n"
+                "Re-run with [cyan]--yes[/cyan] or [cyan]--i-understand[/cyan] to allow those write actions.\n"
+                "Offline demo needs no consent: [green]python -m tiltlock.cli run --demo --yes[/green]",
+                title="Write consent required",
+                border_style="yellow",
+            )
+        )
+        return 1
+
+    client = BgcCliBitgetClient(paper_mode=True, allow_writes=True)
     detector = TiltDetector(baseline_size=10.0)
     # Fixture replay stays deterministic; live polling may call Qwen with fallback.
     diagnostician = TiltDiagnostician(mode="demo" if use_fixture else "paper")
@@ -168,7 +184,8 @@ def run_paper(
             "Connected through [cyan]bgc --paper-trading[/cyan]\n"
             f"Rules: [cyan]{len(checklist.rules)}[/cyan] | "
             f"Path: [yellow]{'fixture replay' if use_fixture else 'live polling'}[/yellow] | "
-            f"Flatten: [bold]{'on' if (aggressive or cfg.policy.flatten_on_lock) else 'off'}[/bold]",
+            f"Flatten: [bold]{'on' if (aggressive or cfg.policy.flatten_on_lock) else 'off'}[/bold]\n"
+            "[dim]Cooldown lock is local to TiltLock. Other bots/terminals are not blocked.[/dim]",
             title="Bitget Demo Trading",
             border_style="green",
         )
@@ -303,7 +320,11 @@ def _run_paper_polling(
         console.print("\n[yellow]Stopped watching fills.[/yellow]")
         return 0
 
-    console.print("[dim]No tilt patterns during this watch window.[/dim]")
+    console.print(
+        "[yellow]Watch window finished with no tilt patterns.[/yellow]\n"
+        f"[dim]Checked {max_polls} times every {poll_interval}s. "
+        "Place Demo trades that match tilt rules, or use --paper --fixture --yes.[/dim]"
+    )
     return 0
 
 

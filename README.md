@@ -6,6 +6,14 @@ TiltLock watches your Bitget trading activity for tilt patterns (fast re-entries
 
 Built for Bitget Agent Hub / Agentic sub-accounts.
 
+## Safety
+
+- Start with `--demo`. It needs no keys and makes no exchange calls.
+- Paper mode is for **Bitget Demo Trading** only. Use `--yes` or `--i-understand` before any cancel/leverage/close actions.
+- Cooldown is a **local TiltLock gateway**. It does not freeze your whole Bitget account against other apps or terminals.
+- This is a risk tool, not financial advice. You are responsible for keys, permissions, and orders you authorize.
+- Do not commit API keys. Prefer Demo keys with no withdraw permission.
+
 ## What it does
 
 1. **Detect** revenge-trading signals from fills and cancels  
@@ -74,8 +82,8 @@ python -m tiltlock.cli run --paper --yes
 | Mode | What it is |
 |------|------------|
 | `--demo` | Offline scenario. No network. Best first run. |
-| `--paper --fixture` | Same scenario, but enforcement goes through real `bgc --paper-trading`. |
-| `--paper` | Watches live Demo Trading fills until a tilt pattern appears. |
+| `--paper --fixture --yes` | Same scenario, enforcement through real `bgc --paper-trading` (Demo only). |
+| `--paper --yes` | Watches Demo Trading fills until a tilt pattern appears. |
 
 If `bgc` is missing or auth fails, paper mode exits with setup help. It does not pretend to succeed.
 

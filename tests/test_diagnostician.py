@@ -45,7 +45,7 @@ class TestTiltDiagnostician(unittest.TestCase):
             signatures=["SIZE_ESCALATION"],
             size_ratio=2.5,
             session_loss=350.0,
-            symbol="TSLAUSDT_rToken",
+            symbol="rTSLAUSDT",
         )
         res = diag_engine.diagnose(trigger, self.checklist)
 
