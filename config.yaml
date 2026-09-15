@@ -1,0 +1,23 @@
+# TiltLock Configuration & Policy Defaults
+detection:
+  # Demo baseline defaults (documented as configurable heuristics, not universal psychology)
+  loss_streak_n: 3                      # Trigger after N consecutive realized red trades
+  loss_streak_window_sec: 1200          # Evaluation window (20 minutes)
+  reentry_after_stop_sec: 60            # Rapid re-entry after stop-out (< 60s)
+  size_escalation_ratio: 2.0            # New order size >= 2.0x baseline/prior loss
+  sl_tamper_while_drawdown: true        # Flag if SL is canceled/widened while PnL < 0
+
+cooldown:
+  min_minutes: 15                       # Local policy clamping floor
+  max_minutes: 120                      # Local policy clamping ceiling
+  default_minutes: 45                   # Fallback if LLM suggestion is missing/invalid
+
+policy:
+  flatten_on_lock: false                # Cancel orders + cooldown always; flatten only if aggressive
+  demo_auto_accept_seconds: 3           # Countdown before auto-accepting evolved rule in --demo
+  qwen_api_url: "https://hackathon.bitgetops.com/v1"
+  qwen_model: "qwen3.8-max"
+
+paper:
+  poll_interval_sec: 5                  # Seconds between bgc order/fill polls
+  max_polls: 60                         # Maximum polling cycles before idle exit

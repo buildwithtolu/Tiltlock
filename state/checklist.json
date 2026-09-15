@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "updated_at": "2026-09-11T12:00:00Z",
+  "rules": [
+    {
+      "rule_id": "R01",
+      "condition": "High-impact macro data releases (CPI, FOMC, NFP)",
+      "hard_constraint": "No new market or limit entries within 5 minutes before/after event",
+      "rationale": "Slippage spike and erratic spread expansion during high volatility events",
+      "created_at": "2026-09-11T12:00:00Z"
+    },
+    {
+      "rule_id": "R02",
+      "condition": "Tokenized equity (rToken) intraday trading",
+      "hard_constraint": "Maximum position sizing capped at 15 contracts per trade",
+      "rationale": "Prevents overleveraging in thin off-market order books",
+      "created_at": "2026-09-11T12:00:00Z"
+    }
+  ]
+}

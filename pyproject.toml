@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tiltlock"
+version = "0.1.0"
+description = "Autonomous trade review, tilt diagnosis, and self-evolving checklist system with live Bitget Agent Hub enforcement."
+authors = [{ name = "Bitget AI Hackathon Team" }]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0",
+    "rich>=13.0.0",
+    "requests>=2.28.0",
+]
+
+[project.scripts]
+tiltlock = "tiltlock.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
