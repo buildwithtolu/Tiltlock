@@ -13,6 +13,8 @@ from tiltlock.diagnostician import TiltDiagnostician
 from tiltlock.display import print_diagnosis
 from tiltlock.enforcer import BgcCliBitgetClient
 from tiltlock.evolver import ChecklistEvolver
+from tiltlock.review_store import save_review
+from tiltlock.signals import fetch_sentiment_snapshot
 from tiltlock.models import TradeFill, OrderCancel, TiltTriggerEvent
 
 logger = logging.getLogger("tiltlock.paper_runner")
@@ -119,6 +121,8 @@ def run_paper(
     use_fixture: bool = False,
     poll_override: Optional[int] = None,
     allow_writes: bool = False,
+    live_llm: bool = False,
+    use_signal: bool = True,
 ) -> int:
     """Run paper mode through real bgc Demo Trading commands."""
     ok, code, msg = BgcCliBitgetClient.probe(paper_mode=True)
@@ -173,8 +177,7 @@ def run_paper(
 
     client = BgcCliBitgetClient(paper_mode=True, allow_writes=True)
     detector = TiltDetector(baseline_size=10.0)
-    # Fixture replay stays deterministic; live polling may call Qwen with fallback.
-    diagnostician = TiltDiagnostician(mode="demo" if use_fixture else "paper")
+    diagnostician = TiltDiagnostician(mode="paper", live_llm=live_llm)
     client.clear_lock()
 
     console.print()
@@ -193,14 +196,33 @@ def run_paper(
 
     if use_fixture:
         return _run_paper_fixture(
-            client, detector, diagnostician, evolver, checklist, cfg, auto_yes, aggressive
+            client,
+            detector,
+            diagnostician,
+            evolver,
+            checklist,
+            cfg,
+            auto_yes,
+            aggressive,
+            use_signal,
         )
     return _run_paper_polling(
-        client, detector, diagnostician, evolver, checklist, cfg, auto_yes, aggressive, poll_override
+        client,
+        detector,
+        diagnostician,
+        evolver,
+        checklist,
+        cfg,
+        auto_yes,
+        aggressive,
+        poll_override,
+        use_signal,
     )
 
 
-def _run_paper_fixture(client, detector, diagnostician, evolver, checklist, cfg, auto_yes, aggressive) -> int:
+def _run_paper_fixture(
+    client, detector, diagnostician, evolver, checklist, cfg, auto_yes, aggressive, use_signal=True
+) -> int:
     root = AppConfig.find_repo_root()
     fixture_path = root / "fixtures" / "tilt_sequence.json"
     with open(fixture_path, "r", encoding="utf-8") as f:
@@ -261,11 +283,21 @@ def _run_paper_fixture(client, detector, diagnostician, evolver, checklist, cfg,
         cfg,
         auto_yes,
         aggressive,
+        use_signal,
     )
 
 
 def _run_paper_polling(
-    client, detector, diagnostician, evolver, checklist, cfg, auto_yes, aggressive, poll_override=None
+    client,
+    detector,
+    diagnostician,
+    evolver,
+    checklist,
+    cfg,
+    auto_yes,
+    aggressive,
+    poll_override=None,
+    use_signal=True,
 ) -> int:
     poll_interval = cfg.paper.poll_interval_sec
     max_polls = poll_override or cfg.paper.max_polls
@@ -289,7 +321,16 @@ def _run_paper_polling(
                     trigger = detector.ingest_fill(fill)
                     if trigger.is_triggered:
                         return _apply_paper_lockout_and_evolution(
-                            client, diagnostician, evolver, checklist, trigger, None, cfg, auto_yes, aggressive
+                            client,
+                            diagnostician,
+                            evolver,
+                            checklist,
+                            trigger,
+                            None,
+                            cfg,
+                            auto_yes,
+                            aggressive,
+                            use_signal,
                         )
 
             for item in client.get_open_orders():
@@ -313,6 +354,7 @@ def _run_paper_polling(
                                 cfg,
                                 auto_yes,
                                 aggressive,
+                                use_signal,
                             )
 
             time.sleep(poll_interval)
@@ -329,7 +371,16 @@ def _run_paper_polling(
 
 
 def _apply_paper_lockout_and_evolution(
-    client, diagnostician, evolver, checklist, triggered_event, market_regime, cfg, auto_yes, aggressive
+    client,
+    diagnostician,
+    evolver,
+    checklist,
+    triggered_event,
+    market_regime,
+    cfg,
+    auto_yes,
+    aggressive,
+    use_signal=True,
 ) -> int:
     console.print(
         Panel.fit(
@@ -341,11 +392,18 @@ def _apply_paper_lockout_and_evolution(
     )
 
     console.print("[bold]Reviewing the trade sequence...[/bold]")
+    market_context = dict(market_regime or {})
+    if use_signal:
+        snapshot = fetch_sentiment_snapshot()
+        market_context["source"] = snapshot.get("source")
+        market_context["summary"] = snapshot.get("summary")
+        market_context["signal_status"] = snapshot.get("status")
     diagnosis = diagnostician.diagnose(
         trigger=triggered_event,
         checklist=checklist,
-        market_context=market_regime,
+        market_context=market_context,
     )
+    save_review(diagnosis, extra={"mode": "paper", "signal": market_context.get("summary")})
     print_diagnosis(diagnosis)
 
     console.print("[bold]Sending protections through bgc...[/bold]")

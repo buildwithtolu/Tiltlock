@@ -14,6 +14,7 @@ venv/
 # Local runtime / secrets
 state/lock_state.json
 state/proposed_rules.log
+state/last_review.json
 *.pem
 *.key
 

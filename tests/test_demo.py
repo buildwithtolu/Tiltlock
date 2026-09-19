@@ -49,7 +49,7 @@ class TestDemoLifecycle(unittest.TestCase):
         self.assertEqual([r.rule_id for r in initial.rules], ["R01", "R02"])
 
         # Run demo with auto_yes=True and aggressive=True
-        exit_code = run_demo(auto_yes=True, aggressive=True)
+        exit_code = run_demo(auto_yes=True, aggressive=True, use_signal=False)
         self.assertEqual(exit_code, 0)
 
         # Verify post-demo state

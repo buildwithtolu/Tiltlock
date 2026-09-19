@@ -9,4 +9,4 @@ Discretionary crypto and tokenized US stock (rToken) day traders on Bitget Agent
 
 ## Role of the LLM
 
-Qwen (`qwen3.8-max`) is the trade-review engine. It reads fills, timing, size changes, and checklist context, then names the behavioral pattern, estimates session cost, recommends cooldown length, and proposes one concrete rule update. Offline `--demo` uses a fixed high-quality review so recordings stay reliable. Paper/live calls Qwen when configured and falls back to a deterministic review if the model is unavailable.
+Default `--demo` builds the review from the session’s own telemetry. It may attach a fail-open `bitget-signal` Fear & Greed snapshot. `--live-llm` calls Qwen only when an API key is set; otherwise the local review is used. Live production trading is disabled. See `docs/SUBMISSION.md` for form wording.

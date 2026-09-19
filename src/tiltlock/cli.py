@@ -12,6 +12,7 @@ if sys.platform == "win32":
 
 from rich.console import Console
 from rich.panel import Panel
+from tiltlock.ask import cmd_ask
 from tiltlock.demo_runner import run_demo
 from tiltlock.display import print_checklist
 from tiltlock.paper_runner import run_paper
@@ -71,13 +72,20 @@ def cmd_run(args) -> int:
         console.print("[red]Error: --fixture only works with --paper.[/red]")
         return 1
     if args.demo:
-        return run_demo(auto_yes=args.yes, aggressive=args.aggressive)
+        return run_demo(
+            auto_yes=args.yes,
+            aggressive=args.aggressive,
+            live_llm=args.live_llm,
+            use_signal=not args.no_signal,
+        )
     if args.paper:
         return run_paper(
             auto_yes=args.yes,
             aggressive=args.aggressive,
             use_fixture=args.fixture,
             allow_writes=bool(args.yes or args.i_understand),
+            live_llm=args.live_llm,
+            use_signal=not args.no_signal,
         )
     console.print("[red]Error: choose --demo or --paper.[/red]")
     return 1
@@ -127,9 +135,24 @@ def main():
         action="store_true",
         help="Also flatten open positions when locking the account",
     )
+    run_parser.add_argument(
+        "--live-llm",
+        dest="live_llm",
+        action="store_true",
+        help="Call Qwen for the review when BITGET_QWEN_API_KEY is set; falls back locally",
+    )
+    run_parser.add_argument(
+        "--no-signal",
+        dest="no_signal",
+        action="store_true",
+        help="Skip bitget-signal (faster offline demo)",
+    )
 
     subparsers.add_parser("status", help="Show cooldown and checklist")
     subparsers.add_parser("unlock", help="Clear the local cooldown lock")
+
+    ask_parser = subparsers.add_parser("ask", help="Ask TiltLock in plain language")
+    ask_parser.add_argument("question", nargs="+", help="Example: why did I get locked?")
 
     args = parser.parse_args()
 
@@ -139,6 +162,8 @@ def main():
         sys.exit(cmd_status())
     if args.command == "unlock":
         sys.exit(cmd_unlock())
+    if args.command == "ask":
+        sys.exit(cmd_ask(" ".join(args.question)))
 
 
 if __name__ == "__main__":

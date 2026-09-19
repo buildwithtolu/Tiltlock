@@ -99,7 +99,7 @@ class TestPaperMode(unittest.TestCase):
         mock_res.stderr = ""
         mock_subproc.return_value = mock_res
 
-        exit_code = run_paper(auto_yes=True, aggressive=True, use_fixture=True)
+        exit_code = run_paper(auto_yes=True, aggressive=True, use_fixture=True, use_signal=False)
         self.assertEqual(exit_code, 0)
 
         # Verify enforcement calls constructed
@@ -127,7 +127,9 @@ class TestPaperMode(unittest.TestCase):
         mock_subproc.return_value = mock_res
 
         # Run 1 poll cycle
-        exit_code = run_paper(auto_yes=True, aggressive=False, use_fixture=False, poll_override=1)
+        exit_code = run_paper(
+            auto_yes=True, aggressive=False, use_fixture=False, poll_override=1, use_signal=False
+        )
         self.assertEqual(exit_code, 0)
 
         all_calls = [call[0][0] for call in mock_subproc.call_args_list]

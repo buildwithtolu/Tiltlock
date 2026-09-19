@@ -10,6 +10,8 @@ from tiltlock.diagnostician import TiltDiagnostician
 from tiltlock.display import print_checklist, print_diagnosis
 from tiltlock.enforcer import MockBitgetClient
 from tiltlock.evolver import ChecklistEvolver
+from tiltlock.review_store import save_review
+from tiltlock.signals import fetch_sentiment_snapshot
 from tiltlock.models import TradeFill, OrderCancel, TiltTriggerEvent
 
 console = Console()
@@ -36,7 +38,13 @@ def _merge_trigger(existing: TiltTriggerEvent | None, incoming: TiltTriggerEvent
     )
 
 
-def run_demo(auto_yes: bool = False, speed_multiplier: float = 1.0, aggressive: bool = False) -> int:
+def run_demo(
+    auto_yes: bool = False,
+    speed_multiplier: float = 1.0,
+    aggressive: bool = False,
+    live_llm: bool = False,
+    use_signal: bool = True,
+) -> int:
     """Run the offline demo: Detect → Diagnose → Enforce → Evolve."""
     root = AppConfig.find_repo_root()
     fixture_path = root / "fixtures" / "tilt_sequence.json"
@@ -48,7 +56,7 @@ def run_demo(auto_yes: bool = False, speed_multiplier: float = 1.0, aggressive: 
     checklist = evolver.reset_to_baseline()
     detector = TiltDetector(baseline_size=10.0)
     enforcer = MockBitgetClient()
-    diagnostician = TiltDiagnostician(mode="demo")
+    diagnostician = TiltDiagnostician(mode="demo", live_llm=live_llm)
     symbol = fixture["market_regime"]["symbol"]
 
     enforcer.clear_lock()
@@ -142,10 +150,24 @@ def run_demo(auto_yes: bool = False, speed_multiplier: float = 1.0, aggressive: 
     time.sleep(delay)
 
     console.print("[bold]Reviewing the trade sequence...[/bold]")
+    market_context = dict(fixture.get("market_regime") or {})
+    if use_signal:
+        snapshot = fetch_sentiment_snapshot()
+        market_context["source"] = snapshot.get("source")
+        market_context["summary"] = snapshot.get("summary")
+        market_context["signal_status"] = snapshot.get("status")
+        if snapshot.get("status") == "ok":
+            console.print(f"[dim]bitget-signal: {snapshot.get('summary')}[/dim]")
+        else:
+            console.print("[dim]bitget-signal: unavailable (continuing without it)[/dim]")
     diagnosis = diagnostician.diagnose(
         trigger=triggered_event,
         checklist=checklist,
-        market_context=fixture.get("market_regime"),
+        market_context=market_context,
+    )
+    save_review(
+        diagnosis,
+        extra={"mode": "demo", "signal": market_context.get("summary")},
     )
     print_diagnosis(diagnosis)
     console.print()

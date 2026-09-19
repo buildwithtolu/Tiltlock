@@ -33,4 +33,6 @@ def print_diagnosis(diagnosis: TiltDiagnosis) -> None:
     table.add_row("Session loss", f"[red]-${diagnosis.session_cost:,.2f} USDT[/red]")
     table.add_row("What happened", diagnosis.sequence_audit)
     table.add_row("Cooldown", f"{diagnosis.prescribed_cooldown_minutes} minutes")
+    if "bitget-signal" in diagnosis.sequence_audit:
+        table.add_row("Skill used", "bitget-signal sentiment-analyst")
     console.print(table)

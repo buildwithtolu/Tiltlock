@@ -47,7 +47,14 @@ python -m tiltlock.cli status
 python -m tiltlock.cli unlock
 ```
 
-You should see a demo loss streak, a review, a cooldown lock, a blocked re-entry, and a new checklist rule.
+You should see a demo loss streak, a review built from those trades, a cooldown lock, a blocked re-entry, and a new checklist rule.
+
+If the network is up, the review also tries **bitget-signal** (Fear & Greed). If that call times out, the demo still finishes.
+
+```powershell
+python -m tiltlock.cli ask "why did I get locked?"
+python -m tiltlock.cli run --demo --yes --no-signal
+```
 
 ## Paper mode (optional)
 
@@ -91,9 +98,10 @@ If `bgc` is missing or auth fails, paper mode exits with setup help. It does not
 
 ```bash
 python -m tiltlock.cli run --demo --yes
-python -m tiltlock.cli run --demo --yes --aggressive
+python -m tiltlock.cli run --demo --yes --no-signal
+python -m tiltlock.cli run --demo --yes --live-llm
 python -m tiltlock.cli run --paper --fixture --yes
-python -m tiltlock.cli run --paper --yes
+python -m tiltlock.cli ask "why did I get locked?"
 python -m tiltlock.cli status
 python -m tiltlock.cli unlock
 python -m unittest discover tests

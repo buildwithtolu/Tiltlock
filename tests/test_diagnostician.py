@@ -1,7 +1,7 @@
 """Unit tests for TiltDiagnostician."""
 
 import unittest
-from tiltlock.diagnostician import TiltDiagnostician, CANNED_DEMO_DIAGNOSIS
+from tiltlock.diagnostician import TiltDiagnostician
 from tiltlock.models import TiltTriggerEvent, Checklist, EvolvedRule
 
 
@@ -25,21 +25,53 @@ class TestTiltDiagnostician(unittest.TestCase):
             ],
         )
 
-    def test_demo_mode_returns_canned_zero_network(self):
+    def test_demo_review_uses_trigger_fields(self):
         diag_engine = TiltDiagnostician(mode="demo")
-        trigger = TiltTriggerEvent(is_triggered=True, signatures=["SIZE_ESCALATION"])
+        trigger = TiltTriggerEvent(
+            is_triggered=True,
+            signatures=["SIZE_ESCALATION (2.5x baseline)", "STOP_LOSS_TAMPER (SL canceled while in drawdown)"],
+            size_ratio=2.5,
+            session_loss=550.0,
+            sl_tampered=True,
+            seconds_since_last_stop=38,
+            symbol="rTSLAUSDT",
+            summary="SIZE_ESCALATION (2.5x baseline), STOP_LOSS_TAMPER",
+        )
         res = diag_engine.diagnose(trigger, self.checklist)
-
-        self.assertEqual(res.pathology, CANNED_DEMO_DIAGNOSIS.pathology)
-        self.assertEqual(res.confidence, CANNED_DEMO_DIAGNOSIS.confidence)
+        self.assertEqual(res.pathology, "SUNK_COST_ESCALATION")
+        self.assertIn("rTSLAUSDT", res.sequence_audit)
+        self.assertIn("550", res.sequence_audit)
         self.assertIn("R02", res.violated_checklist_rules)
         self.assertLessEqual(len(res.sequence_audit.split()), 120)
 
-    def test_fallback_produces_valid_schema(self):
-        # Force fallback by passing invalid endpoint in paper mode
-        diag_engine = TiltDiagnostician(mode="paper")
-        diag_engine.config.policy.qwen_api_url = "http://127.0.0.1:9999/nonexistent"
+    def test_changing_session_loss_changes_review(self):
+        engine = TiltDiagnostician(mode="demo")
+        a = engine.diagnose(
+            TiltTriggerEvent(
+                is_triggered=True,
+                signatures=["RAPID_REENTRY"],
+                session_loss=100.0,
+                symbol="rNVDAUSDT",
+                size_ratio=1.0,
+            ),
+            self.checklist,
+        )
+        b = engine.diagnose(
+            TiltTriggerEvent(
+                is_triggered=True,
+                signatures=["RAPID_REENTRY"],
+                session_loss=999.0,
+                symbol="rNVDAUSDT",
+                size_ratio=1.0,
+            ),
+            self.checklist,
+        )
+        self.assertNotEqual(a.sequence_audit, b.sequence_audit)
+        self.assertIn("999", b.sequence_audit)
 
+    def test_paper_without_qwen_key_uses_local_review(self):
+        diag_engine = TiltDiagnostician(mode="paper", live_llm=True)
+        diag_engine.config.policy.qwen_api_url = "http://127.0.0.1:9999/nonexistent"
         trigger = TiltTriggerEvent(
             is_triggered=True,
             signatures=["SIZE_ESCALATION"],
@@ -48,9 +80,7 @@ class TestTiltDiagnostician(unittest.TestCase):
             symbol="rTSLAUSDT",
         )
         res = diag_engine.diagnose(trigger, self.checklist)
-
-        self.assertEqual(res.confidence, 0.0)
-        self.assertTrue(len(res.evolved_rule.rule_id) >= 2)
+        self.assertIn("rTSLAUSDT", res.sequence_audit)
         self.assertGreaterEqual(res.prescribed_cooldown_minutes, 15)
         self.assertLessEqual(res.prescribed_cooldown_minutes, 120)
 
